@@ -1,0 +1,11 @@
+.history/
+.vscode/
+__pycache__/
+docs.md
+session.log
+data.json
+csrf.txt
+main.log
+menu.json
+parsed.json
+cookies.pkl

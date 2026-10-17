@@ -1,6 +1,8 @@
 from world import *
 import json
 
+PAY = "https://payments.swiggy.com/api/v3"
+
 def _payment_headers(cart_id, address_id, lat, lng):
     with open("data.json", "r") as f:
         d = json.load(f)
@@ -51,15 +53,13 @@ def _get_cod_option(headers):
         "is_gifting_flow": False, "is_inapp_upi_eligible": False,
         "bill_to_company_toggle": False,
     }
-    data = _pay_post("https://payments.swiggy.com/api/v3/payment/get-payment-options", headers, body)["data"]
+    data = _pay_post(f"{PAY}/payment/get-payment-options", headers, body)["data"]
     if not data.get("codEnabled"):
-        log("[ORDER] FATAL cash on delivery is not enabled for this cart")
         raise RuntimeError("cash on delivery is not enabled for this cart")
     for group in data.get("payment_group") or []:
         for m in group.get("payment_methods") or []:
             if m.get("payment_code") == "Cash" and m.get("enabled"):
                 return m
-    log("[ORDER] FATAL no enabled cash payment method")
     raise RuntimeError("no enabled cash payment method")
 
 def _place_cod(headers, address_id, lat, lng, amount):
@@ -78,40 +78,31 @@ def _place_cod(headers, address_id, lat, lng, amount):
         "orderComments": "", "order_comments": "",
         "paymentAmount": str(amount),
     }
-    data = _pay_post("https://payments.swiggy.com/api/v3/order/place", headers, body)["data"]
+    data = _pay_post(f"{PAY}/order/place", headers, body)["data"]
     for key in ("payment_failure_response", "invalid_coupon_response", "inventory_messages"):
         if data.get(key):
             log(f"[PAYMENT] place returned {key}: {data[key]}")
-    order = data.get("order_data") or {}
-    if not order.get("order_id"):
-        log(f"[ORDER]no order_id in place response: {data}" )
+    placed = data.get("order_data") or {}
+    order_id = placed.get("order_id")
+    if not order_id:
         raise RuntimeError(f"no order_id in place response: {data}")
-    return order
+    log(f"[PAYMENT] placed order {order_id} status={placed.get('order_status')}")
 
-def _confirm_order(headers, order_id):
-    return _pay_post("https://payments.swiggy.com/api/v3/order/confirm?order_id={order_id}", headers)["data"]["order_data"]
+    done = _pay_post(f"{PAY}/order/confirm?order_id={order_id}", headers)["data"]["order_data"]
+    log(f"[PAYMENT] confirmed order {order_id} txn={done.get('payment_txn_status')} eta={done.get('sla_time')}min")
+    return done
 
-def checkout(cart_output, address_id, address, ask=True):
+def order(cart_output, address_id, address, max_total=None):
     cart_res = cart_output[0] if isinstance(cart_output, tuple) else cart_output
     lat, lng = address["lat"], address["lng"]
     meta = cart_res["data"]["cartMeta"]
     headers = _payment_headers(meta["cartId"], address_id, lat, lng)
+
     cod = _get_cod_option(headers)
     amount = cod["payable_amount"]
     if float(amount) != float(meta["order_total"]):
-        log(f"[ORDER] FATAL total changed: cart says {meta['order_total']}, payments says {amount}")
         raise RuntimeError(f"total changed: cart says {meta['order_total']}, payments says {amount}")
+    if max_total is not None and float(amount) > max_total:
+        raise RuntimeError(f"total {amount} is above max_total {max_total}, nothing placed")
 
-    print(f"\nCash on delivery, total ₹{amount}")
-    if ask and input("Place this order? [y/N]: ").strip().lower() != "y":
-        log("[PAYMENT] user declined, nothing placed")
-        return None
-
-    order = _place_cod(headers, address_id, lat, lng, amount)
-    order_id = order["order_id"]
-    log(f"[PAYMENT] placed order {order_id} status={order.get('order_status')}")
-
-    done = _confirm_order(headers, order_id)
-    log(f"[PAYMENT] confirmed order {order_id} txn={done.get('payment_txn_status')} eta={done.get('sla_time')}min")
-    print(f"Order {order_id} confirmed, ETA ~{done.get('sla_time')} min. Pay cash on delivery.")
-    return done
+    return _place_cod(headers, address_id, lat, lng, amount)

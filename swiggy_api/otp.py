@@ -27,7 +27,6 @@ def get_otp(number: str):
     except requests.HTTPError as http_err:
         log(f"[OTP] HTTP error occurred while trying to get OTP: {http_err}")
     except Exception as err:
-        print(resp)
         log(f"[OTP] Other error occurred while trying to get OTP: {err}")
     else:
         log("[OTP] Success! requested the OTP")
@@ -42,7 +41,6 @@ def verify_otp(otp: str):
     except requests.HTTPError as http_err:
         log(f"[OTP] HTTP error occurred while trying to verify OTP: {http_err}")
     except Exception as err:
-        print(resp)
         log(f"[OTP] Other error occurred while trying to verify OTP: {err}")
     else:
         log("[OTP] Verified OTP!")
