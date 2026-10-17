@@ -1,6 +1,7 @@
-from order import cart
+from cart import cart
 from otp import get_otp, verify_otp
 from restaurant import search_restaurants, sel_address, get_address ,get_restaurant_menu, parse_menu
+from order import checkout
 import json
 
 if __name__ == "__main__":
@@ -47,5 +48,5 @@ if __name__ == "__main__":
             indices.append(int(choice))
 
         if indices:
-            cart(data, indices, address_id)
-            print("BUILT CART")
+            a = cart(data, indices, address_id)
+            checkout(a, address_id, sel_address(addresses, address_id))
