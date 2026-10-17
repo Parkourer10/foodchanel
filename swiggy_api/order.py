@@ -1,4 +1,4 @@
-from world import *
+from .world import *
 import json
 
 PAY = "https://payments.swiggy.com/api/v3"

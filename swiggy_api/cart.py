@@ -1,5 +1,5 @@
-from world import *
-from session import *
+from .world import *
+from .session import *
 
 def _save_csrf(body):
     csrf = body.get("csrfToken") if isinstance(body, dict) else None

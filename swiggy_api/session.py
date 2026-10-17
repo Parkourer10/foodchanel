@@ -1,6 +1,6 @@
 import pickle
 from playwright.sync_api import sync_playwright
-from world import swiggy, log
+from .world import swiggy, log
 
 def get_cookies_csrf():
   log("[SESSION] Starting Playwright")

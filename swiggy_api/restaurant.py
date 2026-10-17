@@ -1,7 +1,7 @@
-from world import *
+from .world import *
 import json
 import os
-from session import refresh_cookies
+from .session import refresh_cookies
 from urllib.parse import quote
 
 def get_address():

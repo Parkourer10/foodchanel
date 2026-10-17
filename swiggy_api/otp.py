@@ -1,5 +1,5 @@
-from session import get_cookies_csrf
-from world import *
+from .session import get_cookies_csrf
+from .world import *
 import json
 import pickle
 
